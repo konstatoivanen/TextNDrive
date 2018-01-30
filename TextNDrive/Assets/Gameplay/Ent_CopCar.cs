@@ -9,6 +9,7 @@ public class Ent_CopCar : MonoBehaviour
     [Space(10)]
     public float            cs_Stiffness;
     public float            cs_Damping;
+    [Space(10)]
     public float            speedGain;
     public float            acceleration;
     public float            deacceleration;
@@ -23,17 +24,8 @@ public class Ent_CopCar : MonoBehaviour
     private float m_speedCurrent;
     private float m_speedTarget;
     private float m_brakedist;
-    private float m_deltaSpeed;
-    private float m_distanceTotarget;
-    private float m_speedMax = 50;
+    private float m_speedMax;
 
-    void Start ()
-    {
-        s_restState = new Vector2(transform.position.x,  1.25f);
-        laneTimer = laneUpdateInterval;
-    }
-	
-	// Update is called once per frame
 	void Update ()
     {
         LaneUpdate();
@@ -54,13 +46,9 @@ public class Ent_CopCar : MonoBehaviour
         m_speedMax += speedGain * Time.deltaTime;
 
         //Increase speed if falling behind and decrease if too close
-        m_distanceTotarget  = GM.instance.transform.position.x - transform.position.x - tailingDistance;
+        m_brakedist         = BrakeDistance(acceleration, deltaSpeed);
 
-        m_deltaSpeed        = GM.instance.speed - m_speedCurrent;
-
-        m_brakedist         = BrakeDistance(acceleration, m_deltaSpeed);
-
-        m_speedTarget       = GM.instance.speed + m_distanceTotarget + (m_brakedist < Mathf.Abs(m_distanceTotarget)? m_deltaSpeed : 0);
+        m_speedTarget       = m_brakedist > Mathf.Abs(distanceToTarget)? GM.instance.speed : GM.instance.speed + distanceToTarget;
 
         m_speedTarget       = Mathf.Clamp(m_speedTarget, -m_speedMax, m_speedMax);
 
@@ -84,5 +72,24 @@ public class Ent_CopCar : MonoBehaviour
     float BrakeDistance(float a, float v)
     {
         return 0.5f * a * (v/a) * (v/a);
+    }
+
+    float distanceToTarget
+    {
+        get { return GM.instance.transform.position.x - transform.position.x - tailingDistance; }
+    }
+    float deltaSpeed
+    {
+        get { return GM.instance.speed - m_speedCurrent; }
+    }
+
+    public void Spawn(float distance, float baseSpeed)
+    {
+        gameObject.SetActive(true);
+        s_restState     = new Vector2(GM.instance.transform.position.x - distance, 1.25f);
+        s_state         = s_restState;
+        laneTimer       = laneUpdateInterval;
+        m_speedMax      = baseSpeed;
+        m_speedCurrent  = baseSpeed;
     }
 }

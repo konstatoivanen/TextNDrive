@@ -12,6 +12,7 @@ public class GM : MonoBehaviour
     public float deacceleration;
     public float speedReward;
     public float speedPenalty;
+    public float copSpawnSpeed;
     [Space(10)]
     public   AnimationCurve filterCurve;
     internal float speed;
@@ -21,6 +22,7 @@ public class GM : MonoBehaviour
     public   float rightLanePosition;
 
     [Space(10)]
+    public Ent_CopCar       cop;
     public Text             score;
     public Console          console;
     public Transform        car;
@@ -82,6 +84,7 @@ public class GM : MonoBehaviour
         }
 
         UpdateScore();
+
 	}
 
     float Repeat(float pos)
@@ -112,6 +115,9 @@ public class GM : MonoBehaviour
     public void Reward()
     {
         speed += speedReward;
+
+        if (speed > copSpawnSpeed && !cop.gameObject.activeSelf)
+            cop.Spawn(100, speed * 1.5f);
 
         console.IncreseWordRange(1);
 
