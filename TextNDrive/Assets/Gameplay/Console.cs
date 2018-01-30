@@ -11,7 +11,7 @@ public class Console : MonoBehaviour
     public  Outline     flashOutline;
     public  Gradient    failGradient;
     private int         h_consoleColor = Shader.PropertyToID("_ConsoleColor");
-    private float       failTimer = 1;
+    private float       failTimer  = 1;
     private float       flashTimer = 0;
 
     [Space(10)]
@@ -27,21 +27,21 @@ public class Console : MonoBehaviour
     private string      prevInput;
     private string      correctInput;
 
+    private int wordsRange;
+
     public  System.Action OnFail;
     public  System.Action OnSuccess;
     public  System.Action OnReload;
 
 	void Awake ()
     {
-        wordFeed = new string[wordsInBuffer];
-
-        src = GetComponent<AudioSource>();
+        wordFeed    = new string[wordsInBuffer];
+        wordsRange  = wordsInBuffer;
+        src         = GetComponent<AudioSource>();
 
         LoadWordDB();
-
         Refresh();
 	}
-	
 	void Update ()
     {
         //Force focus
@@ -56,11 +56,6 @@ public class Console : MonoBehaviour
         inputField.textComponent.color  = inputFeed.color;
         flashOutline.effectColor        = new Color(inputFeed.color.r, inputFeed.color.g, inputFeed.color.b, flashTimer);
 
-        WordMatchUpdate();
-    }
-
-    private void WordMatchUpdate()
-    {
         prevInput       = currentInput;
         currentInput    = inputField.text;
 
@@ -93,7 +88,6 @@ public class Console : MonoBehaviour
         currentInput    = "";
         prevInput       = "";
         inputField.text = "";
-
         AddNewWord();
     }
 
@@ -108,7 +102,7 @@ public class Console : MonoBehaviour
     }
     private string  RandomWord()
     {
-        return wordArray[Random.Range(0, wordArray.Length)].Trim();
+        return wordArray[Random.Range(wordsRange - wordsInBuffer, wordsRange)].Trim();
     }
     private void    AddNewWord()
     {
@@ -123,6 +117,11 @@ public class Console : MonoBehaviour
             inputFeed.text += wordFeed[i] + "\n";
 
         correctInput = wordFeed[0];
+    }
+    public  void    IncreseWordRange(int increment)
+    {
+        wordsRange += increment;
+        wordsRange  = Mathf.Clamp(wordsRange, 0, wordArray.Length);
     }
 
     private void    FailFx()

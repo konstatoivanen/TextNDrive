@@ -5,13 +5,20 @@ using UnityEngine.UI;
 
 public class GM : MonoBehaviour
 {
+    public static GM instance;
+
     public float position;
+    public float worldScaling = 1;
     public float deacceleration;
     public float speedReward;
     public float speedPenalty;
     [Space(10)]
-    public  AnimationCurve filterCurve;
-    private float speed;
+    public   AnimationCurve filterCurve;
+    internal float speed;
+
+    [Space(10)]
+    public   float lefLanePosition;
+    public   float rightLanePosition;
 
     [Space(10)]
     public Text             score;
@@ -33,30 +40,38 @@ public class GM : MonoBehaviour
     private int     wordCount;
     private float   totalDistance;
 
-    private float   s_state;
-    private float   s_velocity;
+    internal Vector2 s_restState;
+    private  Vector2 s_state;
+    private  Vector2 s_velocity;
 
     private AudioLowPassFilter lowPassFilter;
+
+    private Transform m_camera;
 	
     void Start()
     {
-        lowPassFilter = GetComponent<AudioLowPassFilter>();
+        instance            = this;
+        m_camera            = Camera.main.transform;
+        lowPassFilter       = GetComponent<AudioLowPassFilter>();
+        console.OnSuccess   = Reward;
+        console.OnFail      = Penalty;
+        minPosition         = offset.x;
+        maxPosition         = offset.x + spacing * (blocks.Length - 1);
 
-        console.OnSuccess = Reward;
-        console.OnFail = Penalty;
-
-        minPosition = offset.x;
-        maxPosition = offset.x + spacing * (blocks.Length - 1);
+        s_restState.y = lefLanePosition;
     }
 	void Update ()
     {
+        LaneUpdate();
+        CameraUpdate();
         CarSpringUpdate();
 
         position         = Repeat(position);
         speed            = Mathf.MoveTowards(speed, 0, Time.deltaTime * deacceleration);
         position        -= speed * Time.deltaTime;
         totalDistance   += speed * Time.deltaTime;
-        car.position     = new Vector3(s_state, carHoverCurve.Evaluate(Time.time), 0);
+        car.position     = new Vector3(s_state.x, carHoverCurve.Evaluate(Time.time), s_state.y);
+        car.eulerAngles = new Vector3(0, 90, Mathf.LerpAngle(car.eulerAngles.z, s_velocity.y, Time.deltaTime * 4));
 
         lowPassFilter.cutoffFrequency = Mathf.Lerp(lowPassFilter.cutoffFrequency, filterCurve.Evaluate(speed), Time.deltaTime);
 
@@ -73,12 +88,34 @@ public class GM : MonoBehaviour
     {
         return Mathf.Repeat(pos - minPosition, maxPosition - minPosition) + minPosition;
     }
+    public float kilometersPerHour
+    {
+        get { return Mathf.FloorToInt((speed * worldScaling) * 3.6f); }
+    }
+    public float travelled_meters
+    {
+        get { return totalDistance * worldScaling; }
+    }
+    public float travelled_decameters
+    {
+        get { return Mathf.FloorToInt(Mathf.Repeat((totalDistance * worldScaling), 1000) / 10); }
+    }
+    public int   travelled_kilometers
+    {
+        get { return Mathf.FloorToInt((totalDistance * worldScaling) / 1000); }
+    }
+    public float deltePosition
+    {
+        get { return speed * Time.deltaTime; }
+    }
 
     public void Reward()
     {
         speed += speedReward;
 
-        s_velocity += 10;
+        console.IncreseWordRange(1);
+
+        s_velocity.x += 10;
 
         boostFx.Play();
 
@@ -88,28 +125,52 @@ public class GM : MonoBehaviour
     {
         speed -= speedPenalty;
 
-        s_velocity -= 5;
+        s_velocity.x -= 5;
 
         wordCount--;
     }
 
     void UpdateScore()
     {
-        int km  = Mathf.FloorToInt(totalDistance / 1000);
-        int hm  = Mathf.FloorToInt(Mathf.Repeat(totalDistance, 1000) / 10);
-        int kmh = Mathf.FloorToInt(speed * 3.6f);
-
-        score.text  = "Distance:  " + string.Format("{0:0}.{1:00}km", km, hm);
+        score.text  = "Distance:  " + string.Format("{0:0}.{1:00}km", travelled_kilometers, travelled_decameters);
         score.text += "\n";
-        score.text += "Speed:     " + kmh.ToString() + "km/h";
+        score.text += "Speed:     " + kilometersPerHour.ToString() + "km/h";
         score.text += "\n";
         score.text += "Words:     " + wordCount.ToString();
     }
-
     void CarSpringUpdate()
     {
-        s_velocity += -s_state * cs_Stiffness * Time.deltaTime;  
-        s_velocity /= 1 + (cs_Damping * Time.deltaTime); 
-        s_state += s_velocity * Time.deltaTime;
+        s_velocity      += (s_restState -s_state) * cs_Stiffness * Time.deltaTime;  
+        s_velocity      /= 1 + (cs_Damping * Time.deltaTime); 
+        s_state         += s_velocity * Time.deltaTime;
+    }
+
+    void LaneUpdate()
+    {
+        //Switch Lane
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            s_velocity.y  += (lefLanePosition - s_restState.y) * 2;
+            s_restState.y  = lefLanePosition;
+        }
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            s_velocity.y += (rightLanePosition - s_restState.y) * 2;
+            s_restState.y = rightLanePosition;
+        }
+    }
+    void CameraUpdate()
+    {
+        //Switch Camera position
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            m_camera.position     = new Vector3(-20, 7, -35);
+            m_camera.eulerAngles  = new Vector3(10, 30, 0);
+        }
+        if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            m_camera.position     = new Vector3(20, 7, -35);
+            m_camera.eulerAngles  = new Vector3(10, -30, 0);
+        }
     }
 }
