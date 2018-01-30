@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0c2d3a037797efc4e8100786f9c48456
+timeCreated: 1481307657
+licenseType: Pro
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - smokeTexture: {instanceID: 0}
+  - m_materialSource: {fileID: 2100000, guid: e683cd53f99378a499f1d5948fffae9c, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

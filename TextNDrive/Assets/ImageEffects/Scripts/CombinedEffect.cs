@@ -293,14 +293,15 @@ namespace UnityStandardAssets.ImageEffects
 
             //Blits
             m_desc = src.descriptor;
-            m_desc.width /= 2;
-            m_desc.height /= 2;
+            m_desc.width  = 640;
+            m_desc.height = Mathf.FloorToInt(640 * ((float)src.descriptor.height / src.descriptor.width));
             RenderTexture rt  = RenderTexture.GetTemporary(m_desc);
             rt.filterMode = FilterMode.Point;
 
             Graphics.Blit(src, rt, material, 0); //Pass 0 abd optional motion blur pass
 
             RenderTexture rt2 = RenderTexture.GetTemporary(m_desc);
+            rt2.filterMode = FilterMode.Point;
 
             Graphics.Blit(DofPass(rt, rt2), dest, material, 1); //Pass 2 and optional dof pass
 
