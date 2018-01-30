@@ -80,7 +80,7 @@ public class Console : MonoBehaviour
         }
 
         //Fail
-        if (currentInput.Length > correctInput.Length)
+        if (currentInput != correctInput.Substring(0, currentInput.Length))
         {
             FailFx();
             Refresh();
