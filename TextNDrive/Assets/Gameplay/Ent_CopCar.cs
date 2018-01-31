@@ -16,6 +16,14 @@ public class Ent_CopCar : MonoBehaviour
     public float            tailingDistance;
     public AnimationCurve   carHoverCurve;
 
+    [Space]
+    public  float            minFiringDistance;
+    public  float            maxFiringDistance;
+    public  float            minFiringInterval;
+    public  float            maxFiringInterval;
+    public  Ent_EmpGun       gun;
+    private float            m_fireTimer;
+
     private float   laneTimer;
     private Vector2 s_state;
     private Vector2 s_velocity;
@@ -30,6 +38,7 @@ public class Ent_CopCar : MonoBehaviour
     {
         LaneUpdate();
         LocomotionUpdate();
+        FiringUpdate();
     }
 
     void LocomotionUpdate()
@@ -52,6 +61,9 @@ public class Ent_CopCar : MonoBehaviour
 
         m_speedTarget       = Mathf.Clamp(m_speedTarget, -m_speedMax, m_speedMax);
 
+        if (GM.instance.destroyed)
+            m_speedTarget = 0;
+
         m_speedCurrent      = Mathf.MoveTowards(m_speedCurrent, m_speedTarget, Time.deltaTime * (m_speedTarget < m_speedCurrent? deacceleration : acceleration));
 
         s_restState.x      += m_speedCurrent * Time.deltaTime;
@@ -67,6 +79,21 @@ public class Ent_CopCar : MonoBehaviour
         laneTimer += laneUpdateInterval;
 
         s_restState.y = GM.instance.s_restState.y;
+    }
+
+    void FiringUpdate()
+    {
+        if (Time.time < m_fireTimer)
+            return;
+
+        if(s_restState.y - GM.instance.s_restState.y < -1 || s_restState.y - GM.instance.s_restState.y > 1 || distanceToTarget > maxFiringDistance || distanceToTarget < minFiringDistance)
+        {
+            m_fireTimer = Time.time + Random.Range(minFiringInterval, maxFiringInterval);
+            return;
+        }
+
+        gun.Fire();
+        m_fireTimer = Time.time + Random.Range(minFiringInterval, maxFiringInterval);
     }
 
     float BrakeDistance(float a, float v)

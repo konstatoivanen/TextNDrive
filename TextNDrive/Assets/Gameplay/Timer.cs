@@ -9,6 +9,9 @@ public class Timer : MonoBehaviour
 
 	void Update ()
     {
+        if (GM.instance.destroyed)
+            return;
+
         timer.text = timeFormated();
     }
 

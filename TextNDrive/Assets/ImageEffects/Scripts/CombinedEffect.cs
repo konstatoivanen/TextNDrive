@@ -78,6 +78,8 @@ namespace UnityStandardAssets.ImageEffects
         private RenderTexture accumTex          = null;
         private RenderTexture pauseAccumTex     = null;
 
+        public static CombinedEffect instance;
+
         #endregion
 
         #region Shader hash ids
@@ -249,6 +251,8 @@ namespace UnityStandardAssets.ImageEffects
 
         void Awake()
         {
+            instance = this;
+
             shader              = Shader.Find("Hidden/CombinedEffect");
 
             material.SetTexture(h_overlayTexture, overlayTexture);
@@ -271,11 +275,10 @@ namespace UnityStandardAssets.ImageEffects
 
             if(Application.isPlaying)
             {
-                chroma           = Mathf.Lerp(chroma, 0, Time.deltaTime * 2); //chromatic aberation
                 m_displace       = contrast > 0? Vector2.Lerp(m_displace.normalized, Random.insideUnitCircle.normalized, Time.unscaledDeltaTime * 20) * 0.0015f: Vector2.zero;
                 contrast         = Mathf.Lerp(contrast, contrastTarget, Time.unscaledDeltaTime * 0.5f);
                 m_distortAmount  = Mathf.Lerp(m_distortAmount, Time.timeScale < 1 && Application.isPlaying? distortAmount : 0, Time.unscaledDeltaTime * 5);
-                brightness       = Mathf.MoveTowards(brightness, brightnessTarget, Time.unscaledDeltaTime * 2);
+                brightness       = Mathf.MoveTowards(brightness, brightnessTarget, Time.unscaledDeltaTime * 0.25f);
             }
 
             //Pass 1 Parameters

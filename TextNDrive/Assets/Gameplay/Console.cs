@@ -6,28 +6,32 @@ public class Console : MonoBehaviour
     public  int         wordsInBuffer;
     public  Text        inputFeed;
     public  InputField  inputField;
+    public  Image       timerBar;
 
     [Space(10)]
     public  Outline     flashOutline;
     public  Gradient    failGradient;
     private int         h_consoleColor = Shader.PropertyToID("_ConsoleColor");
-    private float       failTimer  = 1;
-    private float       flashTimer = 0;
+    private float       m_failTimer  = 1;
+    private float       m_flashTimer = 0;
 
     [Space(10)]
     public AudioClip    soundType;
     public AudioClip    soundSuccess;
     public AudioClip    soundFail;
-    private AudioSource src;
+    private AudioSource m_src;
 
-    private string[]    wordArray;
-    private string[]    wordFeed;
+    private string[]    m_wordArray;
+    private string[]    m_wordFeed;
 
-    private string      currentInput;  
-    private string      prevInput;
-    private string      correctInput;
+    private string      m_currentInput;  
+    private string      m_prevInput;
+    private string      m_correctInput;
 
-    private int wordsRange;
+    private float m_timeLimitTimer;
+    private float m_timeLimit;
+    private int   m_wordsRange;
+    private bool  m_enabled = true;
 
     public  System.Action OnFail;
     public  System.Action OnSuccess;
@@ -35,9 +39,9 @@ public class Console : MonoBehaviour
 
 	void Awake ()
     {
-        wordFeed    = new string[wordsInBuffer];
-        wordsRange  = wordsInBuffer;
-        src         = GetComponent<AudioSource>();
+        m_wordFeed    = new string[wordsInBuffer];
+        m_wordsRange  = wordsInBuffer;
+        m_src         = GetComponent<AudioSource>();
 
         LoadWordDB();
         Refresh();
@@ -45,96 +49,137 @@ public class Console : MonoBehaviour
 	void Update ()
     {
         //Force focus
-        inputField.Select();
-        inputField.ActivateInputField();
+        if(m_enabled)
+        {
+            inputField.Select();
+            inputField.ActivateInputField();
+        }
 
         //Shader Color
-        if (failTimer < 1)      failTimer       += Time.deltaTime;
-        if (flashTimer > 0)     flashTimer      -= Time.deltaTime * 4;
+        if (m_failTimer < 1)    m_failTimer       += Time.deltaTime;
+        if (m_flashTimer > 0)   m_flashTimer      -= Time.deltaTime * 4;
 
-        inputFeed.color                 = failGradient.Evaluate(failTimer);
+        inputFeed.color                 = failGradient.Evaluate(m_failTimer);
         inputField.textComponent.color  = inputFeed.color;
-        flashOutline.effectColor        = new Color(inputFeed.color.r, inputFeed.color.g, inputFeed.color.b, flashTimer);
+        flashOutline.effectColor        = new Color(inputFeed.color.r, inputFeed.color.g, inputFeed.color.b, m_flashTimer);
 
-        prevInput       = currentInput;
-        currentInput    = inputField.text;
-
-        //No delta
-        if (prevInput == currentInput)
+        if (!m_enabled)
             return;
 
-        src.PlayOneShot(soundType, 0.3f);
+        m_prevInput       = m_currentInput;
+        m_currentInput    = inputField.text;
+
+        //Timer Bar Fill
+        timerBar.fillAmount = Mathf.FloorToInt((inputTimeLeft / m_timeLimit) * 32) / 32f;
+
+        //Ran out of time
+        if(Time.time > m_timeLimitTimer)
+        {
+            if (OnFail != null) OnFail();
+            FailFx();
+            Refresh();
+        }
+
+        //No delta
+        if (m_prevInput == m_currentInput)
+            return;
+
+        m_src.PlayOneShot(soundType, 0.3f);
 
         //Success
-        if (currentInput.Trim() == correctInput.Trim())
+        if (m_currentInput.Trim() == m_correctInput.Trim())
         {
+            if (OnSuccess != null) OnSuccess();
             SuccessFx();
             Refresh();
-            if (OnSuccess != null) OnSuccess();
             return;
         }
 
         //Fail
-        if (currentInput != correctInput.Substring(0, currentInput.Length))
+        if (m_currentInput != m_correctInput.Substring(0, m_currentInput.Length))
         {
+            if (OnFail != null) OnFail();
             FailFx();
             Refresh();
-            if (OnFail != null) OnFail();
         }
     }
 
     private void    Refresh()
     {
-        currentInput    = "";
-        prevInput       = "";
-        inputField.text = "";
+        m_currentInput      = "";
+        m_prevInput         = "";
+        inputField.text     = "";
+        m_timeLimitTimer    = Time.time + m_timeLimit;
         AddNewWord();
     }
 
     private void    LoadWordDB()
     {
-        var wordFile = Resources.Load("words", typeof(TextAsset)) as TextAsset;
-        wordArray = wordFile.text.Split('\n');
+        TextAsset wordFile = Resources.Load("words", typeof(TextAsset)) as TextAsset;
+        m_wordArray = wordFile.text.Split('\n');
 
-        for (int i = 0; i < wordFeed.Length; ++i)
-            wordFeed[i] = RandomWord();
+        for (int i = 0; i < m_wordFeed.Length; ++i)
+            m_wordFeed[i] = RandomWord();
 
     }
     private string  RandomWord()
     {
-        return wordArray[Random.Range(wordsRange - wordsInBuffer, wordsRange)].Trim();
+        return m_wordArray[Random.Range(m_wordsRange - wordsInBuffer, m_wordsRange)].Trim();
     }
     private void    AddNewWord()
     {
-        for (int i = 0; i < wordFeed.Length -1; ++i)
-            wordFeed[i] = wordFeed[i + 1];
+        for (int i = 0; i < m_wordFeed.Length -1; ++i)
+            m_wordFeed[i] = m_wordFeed[i + 1];
 
-        wordFeed[wordFeed.Length -1] = RandomWord();
+        m_wordFeed[m_wordFeed.Length -1] = RandomWord();
 
         inputFeed.text = "";
 
-        for(int i = wordFeed.Length -1; i >= 0; --i)
-            inputFeed.text += wordFeed[i] + "\n";
+        for(int i = m_wordFeed.Length -1; i >= 0; --i)
+            inputFeed.text += m_wordFeed[i] + "\n";
 
-        correctInput = wordFeed[0];
+        m_correctInput = m_wordFeed[0];
+
+        m_timeLimitTimer = Time.time + m_timeLimit;
     }
     public  void    IncreseWordRange(int increment)
     {
-        wordsRange += increment;
-        wordsRange  = Mathf.Clamp(wordsRange, 0, wordArray.Length);
+        m_wordsRange += increment;
+        m_wordsRange  = Mathf.Clamp(m_wordsRange, 0, m_wordArray.Length);
+    }
+
+    public  void    SetMaxTime(float t)
+    {
+        m_timeLimit         = t;
+        m_timeLimitTimer    = Time.time + t;
+    }
+            float   inputTimeLeft
+    {
+        get
+        {
+            return Mathf.Max(0, m_timeLimitTimer - Time.time);
+        }
     }
 
     private void    FailFx()
     {
-        failTimer   = 0;
-        flashTimer  = 1;
+        m_failTimer   = 0;
+        m_flashTimer  = 1;
 
-        src.PlayOneShot(soundFail);
+        m_src.PlayOneShot(soundFail);
     }
     private void    SuccessFx()
     {
-        flashTimer  = 1;
+        m_flashTimer  = 1;
 
-        src.PlayOneShot(soundSuccess);
+        m_src.PlayOneShot(soundSuccess);
+    }
+
+    public void Disable()
+    {
+        m_enabled = false;
+        inputField.DeactivateInputField();
+        inputField.interactable = false;
+        inputField.gameObject.SetActive(false);
     }
 }

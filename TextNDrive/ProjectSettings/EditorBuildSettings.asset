@@ -6,11 +6,11 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 0
-    path: Assets/Scenes/MainMenu.unity
-    guid: 3844020bf8293c44189583bf98cbccd8
+    path: 
+    guid: 00000000000000000000000000000000
   - enabled: 0
-    path: Assets/Scenes/PlayScene.unity
-    guid: af63de3c09874644cbced390c756c1cc
+    path: 
+    guid: 00000000000000000000000000000000
   - enabled: 1
-    path: Assets/Scenes/asdasdasdasd.unity
-    guid: 1976ac10717bb884c9ca5b35743327ad
+    path: Assets/Scenes/Nightcity.unity
+    guid: fe9876d61c1a75a4f80753c96d12c86b
