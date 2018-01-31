@@ -10,12 +10,13 @@ public class GM : MonoBehaviour
     public float position;
     public float worldScaling = 1;
     public float deacceleration;
+    public float failDeacceleration;
     public float speedReward;
     public float speedPenalty;
     public float copSpawnSpeed;
+
     [Space(10)]
-    public   AnimationCurve filterCurve;
-    internal float speed;
+    public AnimationCurve filterCurve;
 
     [Space(10)]
     public   float lefLanePosition;
@@ -24,9 +25,14 @@ public class GM : MonoBehaviour
     [Space(10)]
     public Ent_CopCar       cop;
     public Text             score;
+    public Text             health;
     public Console          console;
     public Transform        car;
     public ParticleSystem   boostFx;
+    public ParticleSystem   failFx;
+    public GameObject       failHeader;
+    public Material[]       lightMaterials;
+    public GameObject[]     lights;
     public float            cs_Stiffness;
     public float            cs_Damping;
     public AnimationCurve   carHoverCurve;
@@ -36,18 +42,23 @@ public class GM : MonoBehaviour
     public float spacing;
     public Vector3 offset;
 
+    internal float speed;
+    internal bool  failed;
+
     private float minPosition;
     private float maxPosition;
 
     private int     wordCount;
     private float   totalDistance;
 
+    private int     integrity;
+    private float   inputTimer;
+
     internal Vector2 s_restState;
     private  Vector2 s_state;
     private  Vector2 s_velocity;
 
     private AudioLowPassFilter lowPassFilter;
-
     private Transform m_camera;
 	
     void Start()
@@ -64,18 +75,22 @@ public class GM : MonoBehaviour
     }
 	void Update ()
     {
+        //Debug
+        if (Input.GetKeyDown(KeyCode.Space))
+            Fail();
+
         LaneUpdate();
         CameraUpdate();
         CarSpringUpdate();
 
         position         = Repeat(position);
-        speed            = Mathf.MoveTowards(speed, 0, Time.deltaTime * deacceleration);
+        speed            = Mathf.MoveTowards(speed, 0, Time.deltaTime * (failed?failDeacceleration:deacceleration));
         position        -= speed * Time.deltaTime;
         totalDistance   += speed * Time.deltaTime;
         car.position     = new Vector3(s_state.x, carHoverCurve.Evaluate(Time.time), s_state.y);
         car.eulerAngles = new Vector3(0, 90, Mathf.LerpAngle(car.eulerAngles.z, s_velocity.y, Time.deltaTime * 4));
 
-        lowPassFilter.cutoffFrequency = Mathf.Lerp(lowPassFilter.cutoffFrequency, filterCurve.Evaluate(speed), Time.deltaTime);
+        lowPassFilter.cutoffFrequency = Mathf.Lerp(lowPassFilter.cutoffFrequency,filterCurve.Evaluate(failed? 0 : speed), Time.deltaTime);
 
         for (int i = 0; i < blocks.Length; ++i)
         {
@@ -114,6 +129,9 @@ public class GM : MonoBehaviour
 
     public void Reward()
     {
+        if (failed)
+            return;
+
         speed += speedReward;
 
         if (speed > copSpawnSpeed && !cop.gameObject.activeSelf)
@@ -129,11 +147,27 @@ public class GM : MonoBehaviour
     }
     public void Penalty()
     {
+        if (failed)
+            return;
+
         speed -= speedPenalty;
 
         s_velocity.x -= 5;
 
         wordCount--;
+    }
+    public void Fail()
+    {
+        failFx.Play();
+        failHeader.SetActive(true);
+
+        for(int i = 0; i < lightMaterials.Length; ++i)
+        {
+            lightMaterials[i].SetColor("_EmissionColor", Color.black);
+            lights[i].SetActive(false);
+        }
+
+        failed = true;
     }
 
     void UpdateScore()
@@ -149,6 +183,12 @@ public class GM : MonoBehaviour
         s_velocity      += (s_restState -s_state) * cs_Stiffness * Time.deltaTime;  
         s_velocity      /= 1 + (cs_Damping * Time.deltaTime); 
         s_state         += s_velocity * Time.deltaTime;
+    }
+    void IntegrityUpdate()
+    {
+        health.text     = "Hull Integrity:" + integrity.ToString() + "%";
+        health.text    += "\n";
+       // health.text    += "Input Time Left:" + string.Format("[0:00")    
     }
 
     void LaneUpdate()

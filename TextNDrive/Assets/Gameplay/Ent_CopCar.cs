@@ -86,10 +86,11 @@ public class Ent_CopCar : MonoBehaviour
     public void Spawn(float distance, float baseSpeed)
     {
         gameObject.SetActive(true);
-        s_restState     = new Vector2(GM.instance.transform.position.x - distance, 1.25f);
-        s_state         = s_restState;
-        laneTimer       = laneUpdateInterval;
-        m_speedMax      = baseSpeed;
-        m_speedCurrent  = baseSpeed;
+        s_restState         = new Vector2(GM.instance.transform.position.x - distance, 1.25f);
+        s_state             = s_restState;
+        transform.position  = new Vector3(s_state.x, 1, s_state.y);
+        laneTimer           = laneUpdateInterval;
+        m_speedMax          = baseSpeed;
+        m_speedCurrent      = baseSpeed;
     }
 }
