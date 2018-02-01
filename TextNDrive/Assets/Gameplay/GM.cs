@@ -9,6 +9,7 @@ public class GM : MonoBehaviour
     public static GM instance;
 
     public Slider           ui_volume;
+    public Slider           ui_mblur;
     public RectTransform    ui_background;
     public RectTransform    ui_hud_parent;
     public GameObject       ui_menu;
@@ -62,6 +63,8 @@ public class GM : MonoBehaviour
     private  int        m_wordCount;
     private  float      m_totalDistance;
     private  int        m_integrity = 100;
+    private  bool       m_inLeftLane;
+    private  bool       m_cameraAngleToggle;
     internal bool       destroyed;
 
     internal Vector2 s_restState;
@@ -254,38 +257,35 @@ public class GM : MonoBehaviour
             return;
 
         //Switch Lane
-        if (Input.GetKeyDown(KeyCode.UpArrow))
-        {
-            s_velocity.y  += (lefLanePosition - s_restState.y) * 2;
-            s_restState.y  = lefLanePosition;
-        }
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            s_velocity.y += (rightLanePosition - s_restState.y) * 2;
-            s_restState.y = rightLanePosition;
-        }
+        if (!Input.GetKeyDown(KeyCode.Space))
+            return;
+
+        m_inLeftLane = !m_inLeftLane;
+
+        s_velocity.y  += ((m_inLeftLane? rightLanePosition : lefLanePosition) - s_restState.y) * 2;
+        s_restState.y  = m_inLeftLane ? rightLanePosition : lefLanePosition;
     }
     void CameraUpdate()
     {
         if (destroyed)
             return;
 
-        //Switch Camera position
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            m_camera.position     = new Vector3(-20, 7, -35);
-            m_camera.eulerAngles  = new Vector3(10, 30, 0);
-        }
-        if (Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            m_camera.position     = new Vector3(20, 7, -35);
-            m_camera.eulerAngles  = new Vector3(10, -30, 0);
-        }
+        if (!Input.GetKeyDown(KeyCode.Tab))
+            return;
+
+        m_cameraAngleToggle = !m_cameraAngleToggle;
+
+        m_camera.position     = new Vector3(m_cameraAngleToggle? 20 : -20, 7, -35);
+        m_camera.eulerAngles  = new Vector3(10, m_cameraAngleToggle ? -30 : 30, 0);
     }
 
     public void UIChanveVolume()
     {
         AudioListener.volume = ui_volume.value;
+    }
+    public void UIChanveMBlur()
+    {
+        CombinedEffect.instance.accumulation = ui_mblur.value;
     }
     public void UIStartGame()
     {

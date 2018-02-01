@@ -1,0 +1,182 @@
+fileFormatVersion: 2
+guid: 48457bbdf526d894581d5ed07a457687
+timeCreated: 1517502368
+licenseType: Pro
+ModelImporter:
+  serializedVersion: 22
+  fileIDToRecycleName:
+    100000: Building_Big_07
+    100002: //RootNode
+    100004: Buildings_Big_01
+    100006: Buildings_Big_02
+    100008: Buildings_Big_03
+    100010: Buildings_Big_04
+    100012: Buildings_Big_05
+    100014: Buildings_Big_06
+    100016: Buildings_Big_07
+    100018: Buildings_Medium_01
+    100020: Buildings_Medium_02
+    100022: Buildings_Medium_03
+    100024: Buildings_Small_01
+    100026: Buildings_Small_02
+    100028: Buildings_Small_03
+    100030: Buildings_Small_04
+    100032: Buildings_Big_08
+    100034: Buildings_Big_09
+    100036: Buildings_Medium_0
+    400000: Building_Big_07
+    400002: //RootNode
+    400004: Buildings_Big_01
+    400006: Buildings_Big_02
+    400008: Buildings_Big_03
+    400010: Buildings_Big_04
+    400012: Buildings_Big_05
+    400014: Buildings_Big_06
+    400016: Buildings_Big_07
+    400018: Buildings_Medium_01
+    400020: Buildings_Medium_02
+    400022: Buildings_Medium_03
+    400024: Buildings_Small_01
+    400026: Buildings_Small_02
+    400028: Buildings_Small_03
+    400030: Buildings_Small_04
+    400032: Buildings_Big_08
+    400034: Buildings_Big_09
+    400036: Buildings_Medium_0
+    2100000: default
+    2100002: 21 - Default
+    2300000: Building_Big_07
+    2300002: Buildings_Big_01
+    2300004: Buildings_Big_02
+    2300006: Buildings_Big_03
+    2300008: Buildings_Big_04
+    2300010: Buildings_Big_05
+    2300012: Buildings_Big_06
+    2300014: Buildings_Big_07
+    2300016: Buildings_Medium_01
+    2300018: Buildings_Medium_02
+    2300020: Buildings_Medium_03
+    2300022: Buildings_Small_01
+    2300024: Buildings_Small_02
+    2300026: Buildings_Small_03
+    2300028: Buildings_Small_04
+    2300030: Buildings_Big_08
+    2300032: Buildings_Big_09
+    2300034: Buildings_Medium_0
+    3300000: Building_Big_07
+    3300002: Buildings_Big_01
+    3300004: Buildings_Big_02
+    3300006: Buildings_Big_03
+    3300008: Buildings_Big_04
+    3300010: Buildings_Big_05
+    3300012: Buildings_Big_06
+    3300014: Buildings_Big_07
+    3300016: Buildings_Medium_01
+    3300018: Buildings_Medium_02
+    3300020: Buildings_Medium_03
+    3300022: Buildings_Small_01
+    3300024: Buildings_Small_02
+    3300026: Buildings_Small_03
+    3300028: Buildings_Small_04
+    3300030: Buildings_Big_08
+    3300032: Buildings_Big_09
+    3300034: Buildings_Medium_0
+    4300000: Buildings_Small_01
+    4300002: Buildings_Small_02
+    4300004: Buildings_Small_03
+    4300006: Buildings_Small_04
+    4300008: Buildings_Medium_01
+    4300010: Buildings_Medium_02
+    4300012: Buildings_Medium_03
+    4300014: Buildings_Big_01
+    4300016: Buildings_Big_02
+    4300018: Buildings_Big_03
+    4300020: Buildings_Big_04
+    4300022: Buildings_Big_05
+    4300024: Buildings_Big_06
+    4300026: Building_Big_07
+    4300028: Buildings_Big_07
+    4300030: Buildings_Big_08
+    4300032: Buildings_Big_09
+    4300034: Buildings_Medium_0
+    9500000: //RootNode
+  externalObjects: {}
+  materials:
+    importMaterials: 0
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 0
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 0
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 0
+    normalImportMode: 1
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 0
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 1
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

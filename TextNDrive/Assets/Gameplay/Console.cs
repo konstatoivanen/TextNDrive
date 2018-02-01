@@ -81,6 +81,13 @@ public class Console : MonoBehaviour
             Refresh();
         }
 
+        //Remove spaces and tabs from input
+        if (m_currentInput.Length > 0 && (m_currentInput[m_currentInput.Length - 1] == ' ' || m_currentInput[m_currentInput.Length - 1] == '\t'))
+        {
+            m_currentInput  = m_currentInput.Substring(0, m_currentInput.Length - 1);
+            inputField.text = m_currentInput;
+        }
+
         //No delta
         if (m_prevInput == m_currentInput)
             return;
@@ -167,7 +174,7 @@ public class Console : MonoBehaviour
         m_failTimer   = 0;
         m_flashTimer  = 1;
 
-        m_src.PlayOneShot(soundFail);
+        m_src.PlayOneShot(soundFail, 2);
     }
     private void    SuccessFx()
     {
