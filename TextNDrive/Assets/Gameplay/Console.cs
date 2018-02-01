@@ -53,6 +53,7 @@ public class Console : MonoBehaviour
         {
             inputField.Select();
             inputField.ActivateInputField();
+            inputField.MoveTextEnd(false);
         }
 
         //Shader Color
