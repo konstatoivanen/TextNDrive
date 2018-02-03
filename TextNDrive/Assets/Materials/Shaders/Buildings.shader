@@ -35,11 +35,12 @@
 
 		fixed4 _Color, _ColorGlow, _Glow, _ColorA, _Window;
 
-
 		void surf (Input IN, inout SurfaceOutputStandard o) 
 		{
+			clip((IN.worldPos.y - _Glow.x));
+
 			//Window Noise
-			half2 uv	= floor(IN.uv_MainTex * _Window.zy  + IN.worldPos.x* 0.01);
+			half2 uv	= floor(IN.uv_MainTex * _Window.zy  + floor(IN.worldPos.x* 0.01));
 			float3 w	= random(uv + _Time * 0.00001 * _Window.w);
 				   w.x  = lerp(0, 1, saturate((w.x - _Glow.w) / (1 - _Glow.w)) );
 			       w	= w.x * _Color * _Window.z;

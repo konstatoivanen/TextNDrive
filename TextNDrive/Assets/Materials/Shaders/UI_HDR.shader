@@ -1,3 +1,4 @@
+
 Shader "UI/HDR"
 {
 	Properties
@@ -63,6 +64,5 @@ Shader "UI/HDR"
 				
             ENDCG
         }
-
 	}
 }

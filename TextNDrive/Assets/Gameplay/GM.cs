@@ -10,6 +10,7 @@ public class GM : MonoBehaviour
 
     public Slider           ui_volume;
     public Slider           ui_mblur;
+    public Text             ui_practiceMode;
     public RectTransform    ui_background;
     public RectTransform    ui_hud_parent;
     public GameObject       ui_menu;
@@ -20,7 +21,6 @@ public class GM : MonoBehaviour
     private float           ui_background_bottom_target = 0;
 
     [Space(10)]
-    public float position;
     public float worldScaling = 1;
     public float deacceleration;
     public float failDeacceleration;
@@ -28,6 +28,7 @@ public class GM : MonoBehaviour
     public float speedPenalty;
     public float copSpawnSpeed;
     public float startTimeLimit;
+    public bool  practiseMode;
 
     [Space(10)]
     public AnimationCurve filterCurve;
@@ -50,16 +51,42 @@ public class GM : MonoBehaviour
     public float            cs_Damping;
     public AnimationCurve   carHoverCurve;
 
-    [Space(10)]
-    public Transform[] blocks;
-    public float spacing;
-    public Vector3 offset;
+    [System.Serializable]
+    public class RepeatLayer
+    {
+        public Transform[]  blocks;
+        public float        spacing;
+        public Vector3      offset;
 
-    internal float speed;
+        private float minPos;
+        private float maxPos;
+        private float position;
 
-    private float m_minPosition;
-    private float m_maxPosition;
+        public  void  Init()
+        {
+            minPos = offset.x;
+            maxPos = offset.x + spacing * blocks.Length;
+        }
+        public  void  Update(float deltaPos)
+        {
+            position += deltaPos;
 
+            position  = Repeat(position);
+
+            for (int i = 0; i < blocks.Length; ++i)
+            {
+                blocks[i].position = offset + new Vector3(spacing * i + position, 0, 0);
+                blocks[i].position = new Vector3(Repeat(blocks[i].position.x), blocks[i].position.y, blocks[i].position.z);
+            }
+        }
+        private float Repeat(float f)
+        {
+           return Mathf.Repeat(f - minPos, maxPos - minPos) + minPos;
+        }
+    }
+    public RepeatLayer[] layers;
+
+    internal float      speed;
     private  int        m_wordCount;
     private  float      m_totalDistance;
     private  int        m_integrity = 100;
@@ -71,12 +98,16 @@ public class GM : MonoBehaviour
     private  Vector2 s_state;
     private  Vector2 s_velocity;
 
-    private AudioLowPassFilter m_lowPassFilter;
-    private AudioSource m_source;
-    private Transform m_camera;
+    private AudioLowPassFilter  m_lowPassFilter;
+    private AudioSource         m_source;
+    private Transform           m_camera;
 	
     void Start()
     {
+        Application.targetFrameRate = 120;
+
+        CombinedEffect.instance.brightness = 0;
+
         instance            = this;
         m_camera            = Camera.main.transform;
         m_lowPassFilter     = GetComponent<AudioLowPassFilter>();
@@ -84,9 +115,9 @@ public class GM : MonoBehaviour
         console.OnSuccess   = Reward;
         console.OnFail      = Penalty;
         console.SetMaxTime(startTimeLimit);
-        m_minPosition       = offset.x;
-        m_maxPosition       = offset.x + spacing * (blocks.Length - 1);
         s_restState.y       = lefLanePosition;
+
+        for (int i = 0; i < layers.Length; ++i) layers[i].Init();
 
         AudioListener.volume = 0.5f;
     }
@@ -105,28 +136,18 @@ public class GM : MonoBehaviour
 
         if (destroyed) m_source.pitch = Mathf.Lerp(m_source.pitch, 0, Time.deltaTime * 0.5f);
 
-        position            = Repeat(position);
         speed               = Mathf.MoveTowards(speed, 0, Time.deltaTime * (destroyed?failDeacceleration:deacceleration));
-        position           -= speed * Time.deltaTime;
         m_totalDistance    += speed * Time.deltaTime;
         car.position        = new Vector3(s_state.x, carHoverCurve.Evaluate(Time.time), s_state.y);
         car.eulerAngles     = new Vector3(0, 90, Mathf.LerpAngle(car.eulerAngles.z, s_velocity.y, Time.deltaTime * 4));
 
         m_lowPassFilter.cutoffFrequency = Mathf.Lerp(m_lowPassFilter.cutoffFrequency,filterCurve.Evaluate(speed), Time.deltaTime);
 
-        for (int i = 0; i < blocks.Length; ++i)
-        {
-            blocks[i].position = offset + new Vector3(spacing * i + position, 0, 0);
-            blocks[i].position = new Vector3(Repeat(blocks[i].position.x), blocks[i].position.y, blocks[i].position.z);
-        }
+        for (int i = 0; i < layers.Length; ++i) layers[i].Update(-speed * Time.deltaTime);
 
         UpdateScore();
 	}
 
-    float Repeat(float pos)
-    {
-        return Mathf.Repeat(pos - m_minPosition, m_maxPosition - m_minPosition) + m_minPosition;
-    }
     public float kilometersPerHour
     {
         get { return Mathf.FloorToInt((speed * worldScaling) * 3.6f); }
@@ -155,7 +176,7 @@ public class GM : MonoBehaviour
 
         speed += speedReward;
 
-        if (speed > copSpawnSpeed && !cop.gameObject.activeSelf)
+        if (speed > copSpawnSpeed && !cop.gameObject.activeSelf && !practiseMode)
             cop.Spawn(100, speed * 1.5f);
 
         console.IncreseWordRange(1);
@@ -190,7 +211,7 @@ public class GM : MonoBehaviour
                 return;
             }
 
-            m_integrity = value;
+            m_integrity = practiseMode? 100 : value;
             m_integrity = Mathf.Clamp(integrity, 0, 100);
 
             CombinedEffect.instance.noiseAmount = (2f - (m_integrity / 50f));
@@ -287,6 +308,13 @@ public class GM : MonoBehaviour
     {
         CombinedEffect.instance.accumulation = ui_mblur.value;
     }
+    public void UIToggleMode()
+    {
+        UISoundEnter();
+        practiseMode = !practiseMode;
+        ui_practiceMode.text = practiseMode ? "[M: PRACTISE]": "[M:NORMAL]";
+    }
+
     public void UIStartGame()
     {
         UISoundEnter();

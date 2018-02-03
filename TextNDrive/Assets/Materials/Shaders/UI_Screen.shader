@@ -13,11 +13,12 @@ Shader "UI/Screen"
 
 	SubShader
 	{
-		Tags{ "Queue" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent" "PreviewType" = "Plane" }
-		Blend		SrcAlpha OneMinusSrcAlpha
-		Cull		Off 
+		Tags{ "Queue" = "Geometry" "IgnoreProjector" = "True" "RenderType" = "Opaque" "PreviewType" = "Plane" }
+		Blend		Off
+		Cull		Back 
 		Lighting	Off 
-		ZWrite		Off
+		ZWrite		On
+		ZTest		Lequal
 		Fog{ Mode Off }
  
 		Pass 

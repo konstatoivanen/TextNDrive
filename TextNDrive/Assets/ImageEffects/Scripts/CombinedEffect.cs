@@ -66,10 +66,6 @@ namespace UnityStandardAssets.ImageEffects
 
         #region Reference variables
 
-        private Vector3 m_blurDirection;
-        private Vector3 m_velocity;
-        private Vector3 m_prevPos;
-
         private Vector2 m_displace          = Vector2.zero;
         private float   m_distortAmount     = 0;
 
@@ -260,8 +256,6 @@ namespace UnityStandardAssets.ImageEffects
             material.SetVector(h_SCVB,         new Vector4(saturation, chroma, vignette, blood) );
             material.SetVector(h_noiseALB,     new Vector3(noiseAmount, noiseLuminosity , brightness));
 
-            m_prevPos       = transform.position;
-
             m_reconstructionFilter = new ReconstructionFilter();
             GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
 
@@ -270,8 +264,6 @@ namespace UnityStandardAssets.ImageEffects
         }
 		void OnRenderImage(RenderTexture src, RenderTexture dest)
         {
-            //UpdateValues
-            UpdateRadialBlur();
 
             if(Application.isPlaying)
             {
@@ -301,7 +293,7 @@ namespace UnityStandardAssets.ImageEffects
             RenderTexture rt  = RenderTexture.GetTemporary(m_desc);
             rt.filterMode = FilterMode.Point;
 
-            Graphics.Blit(src, rt, material, 0); //Pass 0 abd optional motion blur pass
+            Graphics.Blit(src, rt, material, 0); //Pass 0 and optional motion blur pass Graphics.Blit(MotionBlurPass(src, dest), rt, material, 0);
 
             RenderTexture rt2 = RenderTexture.GetTemporary(m_desc);
             rt2.filterMode = FilterMode.Point;
@@ -377,24 +369,6 @@ namespace UnityStandardAssets.ImageEffects
 
         public  void SetBrightness(float f) { brightnessTarget = f; }
         public  void SetContrastTarget(float f) { contrastTarget = f; }
-
-        private void UpdateRadialBlur()
-        {
-            m_velocity      = transform.InverseTransformVector((transform.position - m_prevPos) / Time.deltaTime);
-            m_prevPos       = transform.position;
-            m_blurDirection = Vector3.ClampMagnitude(!float.IsNaN(m_velocity.x + m_velocity.y + m_velocity.z)? m_velocity + new Vector3(0, 0, 0.1f) : new Vector3(0,0,1), 1);
-            radialBlur      = Vector4.Lerp(radialBlur, new Vector4(m_blurDirection.x, m_blurDirection.y, m_blurDirection.z, float.IsNaN(m_velocity.sqrMagnitude) ? 0 : Mathf.Clamp(m_velocity.sqrMagnitude * 0.0001f, 0, 0.15f)) * Mathf.Clamp(Time.timeScale, 0.75f, 1), Time.deltaTime * 5);
-
-        }
-        public  void SetRadialBlur(Vector3 dir, float amount)
-        {
-            radialBlur      = transform.InverseTransformVector(dir);
-            radialBlur.w    = amount;
-        }         
-        public  void AddRadialBlur(Vector3 localDir, float amount)
-        {
-            radialBlur += new Vector4(localDir.x, localDir.y, localDir.z, amount);
-        }
 
         void OnPauseGame(bool b)
         {

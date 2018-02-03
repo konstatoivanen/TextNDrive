@@ -11,7 +11,6 @@ public class Console : MonoBehaviour
     [Space(10)]
     public  Outline     flashOutline;
     public  Gradient    failGradient;
-    private int         h_consoleColor = Shader.PropertyToID("_ConsoleColor");
     private float       m_failTimer  = 1;
     private float       m_flashTimer = 0;
 
@@ -74,7 +73,7 @@ public class Console : MonoBehaviour
         timerBar.fillAmount = Mathf.FloorToInt((inputTimeLeft / m_timeLimit) * 32) / 32f;
 
         //Ran out of time
-        if(Time.time > m_timeLimitTimer)
+        if(Time.time > m_timeLimitTimer && !GM.instance.practiseMode)
         {
             if (OnFail != null) OnFail();
             FailFx();
