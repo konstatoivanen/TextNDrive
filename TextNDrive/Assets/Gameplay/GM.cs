@@ -56,6 +56,7 @@ public class GM : MonoBehaviour
     {
         public Transform[]  blocks;
         public float        spacing;
+        public float        scaling = 1;
         public Vector3      offset;
 
         private float minPos;
@@ -69,7 +70,7 @@ public class GM : MonoBehaviour
         }
         public  void  Update(float deltaPos)
         {
-            position += deltaPos;
+            position += deltaPos * scaling;
 
             position  = Repeat(position);
 
@@ -84,6 +85,7 @@ public class GM : MonoBehaviour
            return Mathf.Repeat(f - minPos, maxPos - minPos) + minPos;
         }
     }
+    [Space(10)]
     public RepeatLayer[] layers;
 
     internal float      speed;

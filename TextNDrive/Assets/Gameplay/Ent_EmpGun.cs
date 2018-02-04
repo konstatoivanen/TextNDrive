@@ -13,14 +13,8 @@ public class Ent_EmpGun : MonoBehaviour
     private RaycastHit m_hit;
     private bool       m_hitSuccess;
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-            Fire();
-    }
     public void Fire()
     {
-
         StartCoroutine(FireSequence());
     }
 
