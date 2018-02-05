@@ -106,7 +106,7 @@ public class GM : MonoBehaviour
 	
     void Start()
     {
-        Application.targetFrameRate = 120;
+        //Application.targetFrameRate = 120;
 
         CombinedEffect.instance.brightness = 0;
 

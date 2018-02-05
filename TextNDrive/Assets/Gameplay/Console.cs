@@ -103,7 +103,7 @@ public class Console : MonoBehaviour
         }
 
         //Fail
-        if (m_currentInput != m_correctInput.Substring(0, m_currentInput.Length))
+        if (m_currentInput.Length > m_correctInput.Length || m_currentInput != m_correctInput.Substring(0, m_currentInput.Length))
         {
             if (OnFail != null) OnFail();
             FailFx();
