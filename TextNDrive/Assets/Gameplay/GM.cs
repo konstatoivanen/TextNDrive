@@ -1,4 +1,8 @@
 ﻿using System.Collections;
+using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityStandardAssets.ImageEffects;
@@ -8,6 +12,10 @@ public class GM : MonoBehaviour
 {
     public static GM instance;
 
+    public Text             ui_leaderboard;
+    public Text             ui_namePrompt;
+    public RectTransform    ui_competitiveGroup;
+    public InputField       ui_plrName;
     public Slider           ui_volume;
     public Slider           ui_mblur;
     public Text             ui_practiceMode;
@@ -19,6 +27,7 @@ public class GM : MonoBehaviour
     public AudioClip        ui_sound_enter;
     public AudioSource      ui_source;
     private float           ui_background_bottom_target = 0;
+    private float           ui_competitiveGroup_target = 0;
 
     [Space(10)]
     public float worldScaling = 1;
@@ -89,6 +98,7 @@ public class GM : MonoBehaviour
     public RepeatLayer[] layers;
 
     internal float      speed;
+    private  int        m_topSpeed = 0;
     private  int        m_wordCount;
     private  float      m_totalDistance;
     private  int        m_integrity = 100;
@@ -104,8 +114,76 @@ public class GM : MonoBehaviour
     private AudioSource         m_source;
     private Transform           m_camera;
 	
+    [Serializable]
+    public class SaveData
+    {
+        public float mblur  = 0.6f;
+        public float volume = 0.5f;
+        public bool  mode;
+
+        public Score currentScore;
+
+        public List<Score> leaderboard = new List<Score>();
+    }
+
+    [Serializable]
+    public class Score
+    {
+        public string name;
+        public float  distance;
+        public int    topSpeed;
+
+        public Score(string n, float d, int s)
+        {
+            name        = n;
+            distance    = d;
+            topSpeed    = s;
+        }
+
+        public override string ToString()
+        {
+            int km = Mathf.FloorToInt((distance) / 1000);
+            int dm = Mathf.FloorToInt(Mathf.Repeat((distance), 1000) / 10);
+
+            return name + " - " + string.Format("{0:0}.{1:00}km ", km, dm) + topSpeed.ToString() + "km/h";
+        }
+
+        public class ScoreComparer : IComparer<GM.Score>
+        {
+
+            public int Compare(GM.Score first, GM.Score second)
+            {
+                return IsHigher(first, second);
+            }
+
+            /// <summary>
+            ///     Returns 1 if first comes before second in score order.
+            ///     Returns -1 if second comes before first.
+            ///     Returns 0 if the points are identical.
+            /// </summary>
+            public static int IsHigher(GM.Score first, GM.Score second)
+            {
+                if (first.distance == second.distance)
+                    return 0;
+
+                if (first.distance > second.distance)
+                    return -1;
+
+                return 1;
+            }
+
+        }
+    }
+
+    internal SaveData save;
+
+    private BinaryFormatter serializer = new BinaryFormatter();
+    private FileStream fileCurrent;
+
     void Start()
     {
+        Load();
+
         //Application.targetFrameRate = 120;
 
         CombinedEffect.instance.brightness = 0;
@@ -120,20 +198,22 @@ public class GM : MonoBehaviour
         s_restState.y       = lefLanePosition;
 
         for (int i = 0; i < layers.Length; ++i) layers[i].Init();
-
-        AudioListener.volume = 0.5f;
     }
 	void Update ()
     {
         if ( Input.GetKeyDown(KeyCode.Escape) && !ui_menu.activeSelf)
             UIRestart();
 
-        ui_background.offsetMin = new Vector2(ui_background.offsetMin.x, Mathf.MoveTowards(ui_background.offsetMin.y, ui_background_bottom_target, Time.deltaTime * Screen.height * 2f));
+        ui_competitiveGroup.offsetMin   = new Vector2(ui_background.offsetMin.x, Mathf.MoveTowards(ui_competitiveGroup.offsetMin.y, ui_competitiveGroup_target, Time.deltaTime * Screen.height * 2f));
+        ui_background.offsetMin         = new Vector2(ui_background.offsetMin.x, Mathf.MoveTowards(ui_background.offsetMin.y, ui_background_bottom_target, Time.deltaTime * Screen.height * 2f));
 
-        if(ui_hud.activeSelf) ui_hud_parent.anchoredPosition = new Vector2(ui_hud_parent.anchoredPosition.x, Mathf.Lerp(ui_hud_parent.anchoredPosition.y, 0, Time.deltaTime * 4f));
+        if (ui_hud.activeSelf)
+        {
+            ui_hud_parent.anchoredPosition = new Vector2(ui_hud_parent.anchoredPosition.x, Mathf.Lerp(ui_hud_parent.anchoredPosition.y, 0, Time.deltaTime * 4f));
+            LaneUpdate();
+            CameraUpdate();
+        }
 
-        LaneUpdate();
-        CameraUpdate();
         CarSpringUpdate();
 
         if (destroyed) m_source.pitch = Mathf.Lerp(m_source.pitch, 0, Time.deltaTime * 0.5f);
@@ -150,23 +230,23 @@ public class GM : MonoBehaviour
         UpdateScore();
 	}
 
-    public float kilometersPerHour
+    public int    kilometersPerHour
     {
         get { return Mathf.FloorToInt((speed * worldScaling) * 3.6f); }
     }
-    public float travelled_meters
+    public float  travelled_meters
     {
         get { return m_totalDistance * worldScaling; }
     }
-    public float travelled_decameters
+    public float  travelled_decameters
     {
         get { return Mathf.FloorToInt(Mathf.Repeat((m_totalDistance * worldScaling), 1000) / 10); }
     }
-    public int   travelled_kilometers
+    public int    travelled_kilometers
     {
         get { return Mathf.FloorToInt((m_totalDistance * worldScaling) / 1000); }
     }
-    public float deltePosition
+    public float  deltePosition
     {
         get { return speed * Time.deltaTime; }
     }
@@ -259,6 +339,8 @@ public class GM : MonoBehaviour
         if (destroyed)
             return;
 
+        if (kilometersPerHour > m_topSpeed) m_topSpeed = kilometersPerHour;
+
         score.text  = "Distance:  " + string.Format("{0:0}.{1:00}km", travelled_kilometers, travelled_decameters);
         score.text += "\n";
         score.text += "Speed:     " + kilometersPerHour.ToString() + "km/h";
@@ -273,7 +355,6 @@ public class GM : MonoBehaviour
         s_velocity      /= 1 + (cs_Damping * Time.deltaTime); 
         s_state         += s_velocity * Time.deltaTime;
     }
-
     void LaneUpdate()
     {
         if (destroyed)
@@ -305,20 +386,69 @@ public class GM : MonoBehaviour
     public void UIChanveVolume()
     {
         AudioListener.volume = ui_volume.value;
+        save.volume = ui_volume.value;
     }
     public void UIChanveMBlur()
     {
         CombinedEffect.instance.accumulation = ui_mblur.value;
+        save.mblur = ui_mblur.value;
     }
     public void UIToggleMode()
     {
         UISoundEnter();
-        practiseMode = !practiseMode;
-        ui_practiceMode.text = practiseMode ? "[M: PRACTISE]": "[M:NORMAL]";
+        practiseMode                = !practiseMode;
+        ui_practiceMode.text        = practiseMode ? "[MODE: PRACTISE]": "[MODE: NORMAL]";
+        save.mode                   = practiseMode;
+        ui_competitiveGroup_target  = practiseMode? Screen.height : 0;
+    }
+    public void UIUpdateLeaderboard()
+    {
+        ui_leaderboard.text = "";
+
+        if (save == null || save.leaderboard == null || save.leaderboard.Count == 0)
+            return;
+
+        save.leaderboard.Sort(new Score.ScoreComparer());
+
+        for (int i = save.leaderboard.Count -1; i >= 0; --i)
+            ui_leaderboard.text += (i == 0? "1st " : i == 1? "2nd " : i == 2? "3rd " : (i+1).ToString() + "th ") + save.leaderboard[i].ToString() + "\n";
+    }
+    public void UINameChange()
+    {
+        if (ui_plrName.text.Trim() == "")
+            return;
+
+        save.currentScore = FetchPlayer();
+
+        if (save.currentScore == null)
+        {
+            save.currentScore = new Score(ui_plrName.text, 0, 0);
+            save.leaderboard.Add(save.currentScore);
+        }
+
+        ui_plrName.text = "";
+        ui_plrName.DeactivateInputField();
+
+        UILoadPreviousName();
+        UIUpdateLeaderboard();
+    }
+    public void UILoadPreviousName()
+    {
+        if (save == null || save.currentScore == null)
+            return;
+
+        ui_namePrompt.text  = "INSERT NAME [" + save.currentScore.name + "]";
     }
 
     public void UIStartGame()
     {
+        //Ensure we have atleas a default player profile
+        if(save.currentScore == null)
+        {
+            save.currentScore = new Score("Player1", 0, 0);
+            save.leaderboard.Add(save.currentScore);
+        }
+
         UISoundEnter();
         StartCoroutine(StartGame_Internal());
     }
@@ -338,11 +468,13 @@ public class GM : MonoBehaviour
 
     public void UIQuitGame()
     {
+        Save();
         UISoundEnter();
         Application.Quit();
     }
     public void UIRestart()
     {
+        Save();
         UISoundEnter();
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
@@ -354,5 +486,71 @@ public class GM : MonoBehaviour
     public void UISoundSelect()
     {
         ui_source.PlayOneShot(ui_sound_select);
+    }
+
+    public void Save()
+    {
+        SaveScore();
+
+        fileCurrent = File.Create(Application.persistentDataPath + "/save.save");
+        serializer.Serialize(fileCurrent, save);
+        fileCurrent.Close();
+        fileCurrent = null;
+    }
+    public void Load()
+    {
+        try
+        {
+            if (File.Exists(Application.persistentDataPath + "/save.save"))
+            {
+                fileCurrent = File.Open(Application.persistentDataPath + "/save.save", FileMode.Open);
+                save = (SaveData)serializer.Deserialize(fileCurrent);
+                fileCurrent.Close();
+                fileCurrent = null;
+
+                practiseMode                            = save.mode;
+                ui_competitiveGroup_target              = practiseMode ? Screen.height : 0;
+                AudioListener.volume                    = save.volume;
+                CombinedEffect.instance.accumulation    = save.mblur;
+
+                ui_mblur.value          = save.mblur;
+                ui_volume.value         = save.volume;
+                ui_practiceMode.text    = practiseMode ? "[MODE: PRACTISE]" : "[MODE: NORMAL]";
+            }
+            else
+                save = new SaveData();
+        }
+        catch { save = new SaveData(); }
+
+        UILoadPreviousName();
+        UIUpdateLeaderboard();
+    }
+
+    private void  SaveScore()
+    {
+        if (practiseMode)
+            return;
+
+        if (save == null || save.currentScore == null)
+            return;
+
+        if (save.currentScore.distance > m_totalDistance * worldScaling)
+            return;
+
+        save.currentScore.topSpeed = m_topSpeed;
+        save.currentScore.distance = m_totalDistance * worldScaling;
+    }
+    private Score FetchPlayer()
+    {
+        if (save == null || save.leaderboard == null || save.leaderboard.Count == 0)
+            return null;
+
+        for(int i = 0; i < save.leaderboard.Count; ++i)
+        {
+            if (ui_plrName.text == save.leaderboard[i].name)
+                return save.leaderboard[i];
+        }
+
+        return null;
     }
 }
