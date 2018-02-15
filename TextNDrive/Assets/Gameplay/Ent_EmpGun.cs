@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Ent_EmpGun : MonoBehaviour
@@ -33,6 +32,7 @@ public class Ent_EmpGun : MonoBehaviour
         if (Physics.Raycast(transform.position, transform.forward, out m_hit, maxDist))
         {
             arc.Play(transform.position, m_hit.point);
+            IM.Spawn.Fx(IM.Type.fx_impact, m_hit.point, Quaternion.LookRotation(m_hit.normal));
             GM.instance.HitCar(m_hit);
         }
         else

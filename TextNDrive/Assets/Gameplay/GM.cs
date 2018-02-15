@@ -37,7 +37,13 @@ public class GM : MonoBehaviour
     public float speedPenalty;
     public float copSpawnSpeed;
     public float startTimeLimit;
-    public bool  practiseMode;
+
+    [Space(10)]
+    public float dodgeMaxSpeed;
+    public AnimationCurve dodgeAcceleration;
+
+    public   enum  Mode { Normal, Practise, Dodge}
+    internal Mode  mode;
 
     [Space(10)]
     public AnimationCurve filterCurve;
@@ -50,9 +56,10 @@ public class GM : MonoBehaviour
     public Ent_CopCar       cop;
     public Text             score;
     public Console          console;
+    public ObstacleDirector obsDirector;
     public Transform        car;
+    public CollisionProxy   carCollision;
     public ParticleSystem   boostFx;
-    public ParticleSystem   impactFx;
     public GameObject       destructionFx;
     public GameObject       destructionHeader;
     public GameObject[]     lights;
@@ -60,7 +67,7 @@ public class GM : MonoBehaviour
     public float            cs_Damping;
     public AnimationCurve   carHoverCurve;
 
-    [System.Serializable]
+    [Serializable]
     public class RepeatLayer
     {
         public Transform[]  blocks;
@@ -103,12 +110,14 @@ public class GM : MonoBehaviour
     private  float      m_totalDistance;
     private  int        m_integrity = 100;
     private  bool       m_inLeftLane;
+    private  float      m_laneSwitchTime;
     private  bool       m_cameraAngleToggle;
     internal bool       destroyed;
 
     internal Vector2 s_restState;
     private  Vector2 s_state;
     private  Vector2 s_velocity;
+    private  Vector2 s_velocity_prev;
 
     private AudioLowPassFilter  m_lowPassFilter;
     private AudioSource         m_source;
@@ -119,7 +128,7 @@ public class GM : MonoBehaviour
     {
         public float mblur  = 0.6f;
         public float volume = 0.5f;
-        public bool  mode;
+        public Mode  mode;
 
         public Score currentScore;
 
@@ -186,6 +195,8 @@ public class GM : MonoBehaviour
 
         //Application.targetFrameRate = 120;
 
+        carCollision.collisionEvent = OnCollisionEnter;
+
         CombinedEffect.instance.brightness = 0;
 
         instance            = this;
@@ -207,21 +218,28 @@ public class GM : MonoBehaviour
         ui_competitiveGroup.offsetMin   = new Vector2(ui_background.offsetMin.x, Mathf.MoveTowards(ui_competitiveGroup.offsetMin.y, ui_competitiveGroup_target, Time.deltaTime * Screen.height * 2f));
         ui_background.offsetMin         = new Vector2(ui_background.offsetMin.x, Mathf.MoveTowards(ui_background.offsetMin.y, ui_background_bottom_target, Time.deltaTime * Screen.height * 2f));
 
-        if (ui_hud.activeSelf)
+        CarSpringUpdate();
+
+        if (destroyed) m_source.pitch = Mathf.Lerp(m_source.pitch, 0, Time.deltaTime * 0.5f);
+       
+        if(mode == Mode.Dodge && !ui_menu.activeSelf)
         {
+            LaneUpdate();
+            speed = Mathf.MoveTowards(speed, destroyed ? 30 : dodgeMaxSpeed, Time.deltaTime * (destroyed ? failDeacceleration : dodgeAcceleration.Evaluate(speed)));
+        }
+
+        if (mode != Mode.Dodge && ui_hud.activeSelf)
+        {
+            speed = Mathf.MoveTowards(speed, 0, Time.deltaTime * (destroyed ? failDeacceleration : deacceleration));
             ui_hud_parent.anchoredPosition = new Vector2(ui_hud_parent.anchoredPosition.x, Mathf.Lerp(ui_hud_parent.anchoredPosition.y, 0, Time.deltaTime * 4f));
+
             LaneUpdate();
             CameraUpdate();
         }
 
-        CarSpringUpdate();
-
-        if (destroyed) m_source.pitch = Mathf.Lerp(m_source.pitch, 0, Time.deltaTime * 0.5f);
-
-        speed               = Mathf.MoveTowards(speed, 0, Time.deltaTime * (destroyed?failDeacceleration:deacceleration));
         m_totalDistance    += speed * Time.deltaTime;
         car.position        = new Vector3(s_state.x, carHoverCurve.Evaluate(Time.time), s_state.y);
-        car.eulerAngles     = new Vector3(0, 90, Mathf.LerpAngle(car.eulerAngles.z, s_velocity.y, Time.deltaTime * 4));
+        car.eulerAngles     = new Vector3(0, 90, Mathf.LerpAngle(car.eulerAngles.z, (s_velocity.y - s_velocity_prev.y) * 50, Time.deltaTime * 4));
 
         m_lowPassFilter.cutoffFrequency = Mathf.Lerp(m_lowPassFilter.cutoffFrequency,filterCurve.Evaluate(speed), Time.deltaTime);
 
@@ -258,7 +276,7 @@ public class GM : MonoBehaviour
 
         speed += speedReward;
 
-        if (speed > copSpawnSpeed && !cop.gameObject.activeSelf && !practiseMode)
+        if (speed > copSpawnSpeed && !cop.gameObject.activeSelf && mode == Mode.Normal)
             cop.Spawn(100, speed * 1.5f);
 
         console.IncreseWordRange(1);
@@ -293,8 +311,10 @@ public class GM : MonoBehaviour
                 return;
             }
 
-            m_integrity = practiseMode? 100 : value;
+            m_integrity = mode == Mode.Practise ? 100 : value;
             m_integrity = Mathf.Clamp(integrity, 0, 100);
+
+            m_lowPassFilter.cutoffFrequency = 20;
 
             CombinedEffect.instance.noiseAmount = (2f - (m_integrity / 50f));
             CombinedEffect.instance.blood       = CombinedEffect.instance.noiseAmount * 0.125f;
@@ -327,11 +347,28 @@ public class GM : MonoBehaviour
         if (hit.transform != car)
             return;
 
-        impactFx.transform.position = hit.point;
-        impactFx.transform.forward  = hit.normal;
-        impactFx.Play();
-
         integrity -= 10;
+    }
+    
+    void OnCollisionEnter(Collision c)
+    {
+        if (mode == Mode.Dodge)
+        {
+            if(Math.Abs(c.transform.position.z - s_restState.y) < 0.5f || Mathf.Abs(c.transform.position.z - s_state.y) < 2)
+                integrity -= 5;
+            else
+                return;
+        }
+
+        if (Math.Abs(c.transform.position.z - s_restState.y) < 0.5f)
+            SwitchLane(true);
+
+        float sign = Mathf.Sign(transform.position.x - c.contacts[0].point.x);
+
+        s_velocity.x    += 30 * sign;
+        speed           += 5 * sign;
+
+        IM.Spawn.Fx(IM.Type.fx_collision, c.contacts[0].point, Quaternion.identity);
     }
 
     void UpdateScore()
@@ -351,6 +388,7 @@ public class GM : MonoBehaviour
     }
     void CarSpringUpdate()
     {
+        s_velocity_prev  = s_velocity;
         s_velocity      += (s_restState -s_state) * cs_Stiffness * Time.deltaTime;  
         s_velocity      /= 1 + (cs_Damping * Time.deltaTime); 
         s_state         += s_velocity * Time.deltaTime;
@@ -361,13 +399,12 @@ public class GM : MonoBehaviour
             return;
 
         //Switch Lane
-        if (!Input.GetKeyDown(KeyCode.Space))
+        if (!Input.GetKeyDown(KeyCode.Space) || Time.time < m_laneSwitchTime)
             return;
 
-        m_inLeftLane = !m_inLeftLane;
+        m_laneSwitchTime = Time.time + 0.25f;
 
-        s_velocity.y  += ((m_inLeftLane? rightLanePosition : lefLanePosition) - s_restState.y) * 2;
-        s_restState.y  = m_inLeftLane ? rightLanePosition : lefLanePosition;
+        SwitchLane();
     }
     void CameraUpdate()
     {
@@ -383,6 +420,18 @@ public class GM : MonoBehaviour
         m_camera.eulerAngles  = new Vector3(10, m_cameraAngleToggle ? -30 : 30, 0);
     }
 
+    public void SwitchLane(bool fast = false)
+    {
+        m_inLeftLane  = !m_inLeftLane;
+        s_restState.y = m_inLeftLane ? rightLanePosition : lefLanePosition;
+
+        if (!fast)
+            return;
+        
+        s_velocity.y += ((m_inLeftLane ? rightLanePosition : lefLanePosition) - s_restState.y);
+        s_state       = Vector2.Lerp(s_state, s_restState, 0.5f);
+    }
+
     public void UIChanveVolume()
     {
         AudioListener.volume = ui_volume.value;
@@ -396,10 +445,14 @@ public class GM : MonoBehaviour
     public void UIToggleMode()
     {
         UISoundEnter();
-        practiseMode                = !practiseMode;
-        ui_practiceMode.text        = practiseMode ? "[MODE: PRACTISE]": "[MODE: NORMAL]";
-        save.mode                   = practiseMode;
-        ui_competitiveGroup_target  = practiseMode? Screen.height : 0;
+
+        mode = mode == Mode.Normal ? Mode.Practise : mode == Mode.Practise ? Mode.Dodge : Mode.Normal;
+
+        ui_practiceMode.text        = mode == Mode.Normal ? "[MODE: NORMAL]" : mode == Mode.Practise ? "[MODE: PRACTISE]" : "[MODE: DODGE]";
+        save.mode                   = mode;
+        ui_competitiveGroup_target  = mode == Mode.Normal? 0 : Screen.height;
+
+        m_camera.position           = new Vector3(mode == Mode.Dodge ? -10 : -20, 7, -35);
     }
     public void UIUpdateLeaderboard()
     {
@@ -459,6 +512,13 @@ public class GM : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         ui_menu.SetActive(false);
+
+        if (mode == Mode.Dodge)
+        {
+            obsDirector.enabled = true;
+            yield break;
+        }
+
         ui_hud.SetActive(true);
 
         yield return new WaitForSeconds(0.4f);
@@ -492,7 +552,7 @@ public class GM : MonoBehaviour
     {
         SaveScore();
 
-        fileCurrent = File.Create(Application.persistentDataPath + "/save.save");
+        fileCurrent = File.Create(Application.dataPath + "/save.save");
         serializer.Serialize(fileCurrent, save);
         fileCurrent.Close();
         fileCurrent = null;
@@ -501,21 +561,21 @@ public class GM : MonoBehaviour
     {
         try
         {
-            if (File.Exists(Application.persistentDataPath + "/save.save"))
+            if (File.Exists(Application.dataPath + "/save.save"))
             {
-                fileCurrent = File.Open(Application.persistentDataPath + "/save.save", FileMode.Open);
+                fileCurrent = File.Open(Application.dataPath + "/save.save", FileMode.Open);
                 save = (SaveData)serializer.Deserialize(fileCurrent);
                 fileCurrent.Close();
                 fileCurrent = null;
 
-                practiseMode                            = save.mode;
-                ui_competitiveGroup_target              = practiseMode ? Screen.height : 0;
+                mode                                    = save.mode;
+                ui_competitiveGroup_target              = mode == Mode.Normal ? 0 : Screen.height;
                 AudioListener.volume                    = save.volume;
                 CombinedEffect.instance.accumulation    = save.mblur;
 
                 ui_mblur.value          = save.mblur;
                 ui_volume.value         = save.volume;
-                ui_practiceMode.text    = practiseMode ? "[MODE: PRACTISE]" : "[MODE: NORMAL]";
+                ui_practiceMode.text    = mode == Mode.Normal ? "[MODE: NORMAL]" : mode == Mode.Practise ? "[MODE: PRACTISE]" : "[MODE: DODGE]";
             }
             else
                 save = new SaveData();
@@ -528,7 +588,7 @@ public class GM : MonoBehaviour
 
     private void  SaveScore()
     {
-        if (practiseMode)
+        if (mode != Mode.Normal)
             return;
 
         if (save == null || save.currentScore == null)

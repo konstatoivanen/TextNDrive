@@ -16,7 +16,7 @@ public class Ent_CopCar : MonoBehaviour
     public float            tailingDistance;
     public AnimationCurve   carHoverCurve;
 
-    [Space]
+    [Space(10)]
     public  float            minFiringDistance;
     public  float            maxFiringDistance;
     public  float            minFiringInterval;
@@ -119,5 +119,13 @@ public class Ent_CopCar : MonoBehaviour
         laneTimer           = laneUpdateInterval;
         m_speedMax          = baseSpeed;
         m_speedCurrent      = baseSpeed;
+    }
+
+    void OnCollisionEnter(Collision c)
+    {
+        float sign = Mathf.Sign(transform.position.x - c.contacts[0].point.x);
+
+        m_speedCurrent += 20 * sign;
+        s_velocity.x   += 30 * sign;
     }
 }

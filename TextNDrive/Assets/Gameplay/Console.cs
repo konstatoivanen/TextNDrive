@@ -73,7 +73,7 @@ public class Console : MonoBehaviour
         timerBar.fillAmount = Mathf.FloorToInt((inputTimeLeft / m_timeLimit) * 32) / 32f;
 
         //Ran out of time
-        if(Time.time > m_timeLimitTimer && !GM.instance.practiseMode)
+        if(Time.time > m_timeLimitTimer && GM.instance.mode == GM.Mode.Normal)
         {
             if (OnFail != null) OnFail();
             FailFx();
@@ -173,7 +173,7 @@ public class Console : MonoBehaviour
         m_failTimer   = 0;
         m_flashTimer  = 1;
 
-        m_src.PlayOneShot(soundFail, 2);
+        m_src.PlayOneShot(soundFail, 1.5f);
     }
     private void    SuccessFx()
     {
